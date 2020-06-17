@@ -1,4 +1,4 @@
 import json
 
-obj = json.parse('{ "a" : "A", "b" : "B", "list": [ "c", "d" ], "obj": {"one": 1, "two": 2.0, "false": false, "true": true} }')
+obj = json.parse(open("data.json", "r").read())
 print(json.stringify(obj))

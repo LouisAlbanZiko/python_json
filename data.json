@@ -1,0 +1,16 @@
+{ 
+	"a" : "A",
+	"b" : "B",
+	"list":
+	[
+		"c",
+		"d"
+	],
+	"obj":
+	{
+		"one": 1,
+		"two": 2.0,
+		"false": false,
+		"true": true
+	}
+}
