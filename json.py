@@ -1,3 +1,10 @@
+from stack import Stack
+
+string = ""
+index = 0
+line = 1
+stack = Stack()
+
 class JSONObject:
 	def __init__(self):
 		self.data = []
@@ -13,9 +20,9 @@ class JSONObject:
 	def __getitem__(self, name): # [] operator function
 		index = 0
 		while name != self.names[index]: # find index of name
-			index += 1
+			nextChar()
 			if index == len(self.data):	 # if index is bigger than length
-				raise Exception("No such item in object")	# index out of bounds
+				raise JSONException("No such item in object")	# index out of bounds
 		return self.data[index]
 
 	def __str__(self, indent=0): # function for printing
@@ -38,10 +45,24 @@ class JSONArray(list):
 		print_string += ("\t" * (indent - 1)) + "]" # end the array
 		return print_string
 
-string = ""
-index = 0
+# returns a string containing info about
+def getInfo():
+	return '\nLine: {0}, Variable: "{1}"'.format(line, stack.join('.'))
 
-# function to turn the the object to a string
+# general exception for json
+class JSONException(Exception):
+	def __init__(self, message):
+		super().__init__(message+getInfo())
+
+def nextChar():
+	global index
+	global string
+	global line
+	if string[index] == '\n':
+		line += 1
+	index += 1
+
+# function to turn the object to a string
 def stringify(obj, indent=0):
 	if isinstance(obj, JSONObject) or isinstance(obj, JSONArray):
 		return obj.__str__(indent+1)
@@ -56,6 +77,7 @@ def parse(str_arg):
 	global index
 	string = str_arg
 	index = 0
+	line = 1
 	return parseValue()
 
 def skipWhitespace():
@@ -63,7 +85,7 @@ def skipWhitespace():
 	global index
 	c = string[index]
 	while c == ' ' or c == '\r' or c == '\n' or c == '\t':
-		index += 1
+		nextChar()
 		c = string[index]
 
 # check what the type of the value is and parse using the corresponding function
@@ -90,37 +112,40 @@ def parseName():
 	global index
 	skipWhitespace()
 	if string[index] == '"':
-		index += 1
+		nextChar()
 		start = index
 		while string[index] != '"':
-			index += 1
-		index += 1
+			nextChar()
+		nextChar()
 		return string[start:index - 1]
 	else:
-		raise Exception('Expected " for variable name')
+		raise JSONException('Expected " for variable name')
 
 def parseObject():
 	global string
 	global index
 	obj = JSONObject()
 	while 1:
-		index += 1
+		nextChar()
 		name = parseName()
+		stack.push(name)
 		skipWhitespace()
 		if string[index] == ':':
-			index += 1
+			nextChar()
 			value = parseValue()
 			obj.add(name, value)
 		else:
-			raise Exception("Expected : between variable name and value")
+			raise JSONException("Expected : between variable name and value")
 		skipWhitespace()
 		if string[index] == ',':
+			stack.pop()
 			continue
 		elif string[index] == '}':
+			stack.pop()
 			break
 		else:
-			raise Exception("Expected , for next variable or } for end of object")
-	index += 1
+			raise JSONException("Expected , for next variable or } for end of object")
+	nextChar()
 	return obj
 
 def parseArray():
@@ -128,7 +153,7 @@ def parseArray():
 	global index
 	arr = JSONArray()
 	while 1:
-		index += 1
+		nextChar()
 		arr.append(parseValue())
 		skipWhitespace()
 		if string[index] == ',':
@@ -136,18 +161,18 @@ def parseArray():
 		elif string[index] == ']':
 			break
 		else:
-			raise Exception("Expected , for next variable or ] for end of array")
-	index += 1
+			raise JSONException("Expected , for next variable or ] for end of array")
+	nextChar()
 	return arr
 
 def parseString():
 	global string
 	global index
-	index += 1
+	nextChar()
 	start = index
 	while string[index] != '"':
-		index += 1
-	index += 1
+		nextChar()
+	nextChar()
 	return string[start:index - 1]
 
 def parseNr():
@@ -155,13 +180,13 @@ def parseNr():
 	global index
 	start = index
 	while string[index].isdigit():
-		index += 1
+		nextChar()
 	if string[index] != '.':
 		return int(string[start:index])
 	else:
-		index += 1
+		nextChar()
 		while string[index].isdigit():
-			index += 1
+			nextChar()
 		return float(string[start:index])
 
 def parseBool():
@@ -169,14 +194,11 @@ def parseBool():
 	global index
 	start = index
 	while(string[index].isalpha()):
-		index += 1
+		nextChar()
 	found_str = string[start:index]
 	if found_str == "true":
 		return True
 	elif found_str == "false":
 		return False
 	else:
-		raise Exception("Expected true or false but found " + found_str)
-
-
-
+		raise JSONException("Expected true or false but found " + found_str)
