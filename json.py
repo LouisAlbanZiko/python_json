@@ -5,6 +5,25 @@ index = 0
 line = 1
 stack = Stack()
 
+# external function to turn a string to a json object
+def parse(str_arg):
+	global string
+	global index
+	string = str_arg		# initialize variables
+	index = 0
+	line = 1
+	return parseValue()		# parse root variable
+
+# external function to turn the object to a string
+# this was mostly used for debugging and wasn't explained in the project
+def stringify(obj, indent=0):
+	if isinstance(obj, JSONObject) or isinstance(obj, JSONArray):	# add indent to containers
+		return obj.__str__(indent+1)
+	elif isinstance(obj, str):	# add quotes to strings
+		return '"'+obj+'"'
+	else:
+		return str(obj)			# otherwise just turn into a string
+
 class JSONObject:
 	def __init__(self):
 		self.data = []
@@ -17,12 +36,15 @@ class JSONObject:
 	def __len__(self):
 		return len(self.data)
 	
-	def __getitem__(self, name): # [] operator function
+	# [] operator function
+	# can be used as follows:
+	# obj["name"]
+	def __getitem__(self, name):
 		index = 0
 		while name != self.names[index]: # find index of name
 			nextChar()
 			if index == len(self.data):	 # if index is bigger than length
-				raise JSONException("No such item in object")	# index out of bounds
+				raise Exception("No such item in object")	# index out of bounds
 		return self.data[index]
 
 	def __str__(self, indent=0): # function for printing
@@ -45,11 +67,14 @@ class JSONArray(list):
 		print_string += ("\t" * (indent - 1)) + "]" # end the array
 		return print_string
 
-# returns a string containing info about
+# returns a string containing info about the current state of parsing
+# used to print additional information when an exception is raised
+# namely the line and the variable the exception occurred on
 def getInfo():
 	return '\nLine: {0}, Variable: "{1}"'.format(line, stack.join('.'))
 
 # general exception for json
+# calls getInfo to print extra info about the circumstances of the exception
 class JSONException(Exception):
 	def __init__(self, message):
 		super().__init__(message+getInfo())
@@ -62,24 +87,6 @@ def nextChar():
 		line += 1
 	index += 1
 
-# function to turn the object to a string
-def stringify(obj, indent=0):
-	if isinstance(obj, JSONObject) or isinstance(obj, JSONArray):
-		return obj.__str__(indent+1)
-	elif isinstance(obj, str):
-		return '"'+obj+'"'
-	else:
-		return str(obj)
-
-# function to turn a string to a json object
-def parse(str_arg):
-	global string
-	global index
-	string = str_arg
-	index = 0
-	line = 1
-	return parseValue()
-
 def skipWhitespace():
 	global string
 	global index
@@ -87,6 +94,10 @@ def skipWhitespace():
 	while c == ' ' or c == '\r' or c == '\n' or c == '\t':
 		nextChar()
 		c = string[index]
+
+
+# the following functions follow the rules explained in the word doc
+
 
 # check what the type of the value is and parse using the corresponding function
 def parseValue():
@@ -100,12 +111,12 @@ def parseValue():
 		return parseArray()
 	elif c == '"':
 		return parseString()
-	elif c.isdigit():
+	elif c.isdigit() or c == '-':
 		return parseNr()
 	elif c == 't' or c == 'f':
 		return parseBool()
 	else:
-		pass
+		raise JSONException("No value found")
 
 def parseName():
 	global string
@@ -127,6 +138,9 @@ def parseObject():
 	obj = JSONObject()
 	while 1:
 		nextChar()
+		skipWhitespace()
+		if string[index] == '}':
+			break
 		name = parseName()
 		stack.push(name)
 		skipWhitespace()
@@ -179,6 +193,8 @@ def parseNr():
 	global string
 	global index
 	start = index
+	if string[index] == '-':
+		nextChar()
 	while string[index].isdigit():
 		nextChar()
 	if string[index] != '.':
